@@ -299,15 +299,16 @@
 						title: 'Senha alterada com sucesso',
 						icon: 'success',
 						timer: 2000,
-						didClose: () => {
-							window.location.reload();
-						}
+						showConfirmButton: false
+					}).then(() => {
+						window.location.reload();
 					});
 				} else {
 					Swal.fire({
 						title: 'Erro ao alterar senha',
 						icon: 'error',
-						timer: 2000
+						timer: 2000,
+						showConfirmButton: false
 					});
 				}
 			})
@@ -338,15 +339,16 @@
 						title: 'Grupo alterado com sucesso',
 						icon: 'success',
 						timer: 2000,
-						didClose: () => {
-							window.location.reload();
-						}
+						showConfirmButton: false
+					}).then(() => {
+						window.location.reload();
 					});
 				} else {
 					Swal.fire({
 						title: 'Erro ao alterar grupo',
 						icon: 'error',
-						timer: 2000
+						timer: 2000,
+						showConfirmButton: false
 					});
 				}
 			})
@@ -379,15 +381,16 @@
 								title: 'Usuário bloqueado com sucesso',
 								icon: 'success',
 								timer: 2000,
-								didClose: () => {
-									window.location.reload();
-								}
+								showConfirmButton: false
+							}).then(() => {
+								window.location.reload();
 							});
 						} else {
 							Swal.fire({
 								title: 'Erro ao bloquear usuário',
 								icon: 'error',
-								timer: 2000
+								timer: 2000,
+								showConfirmButton: false
 							});
 						}
 					})
@@ -422,9 +425,9 @@
 								title: 'Usuário ativado com sucesso',
 								icon: 'success',
 								timer: 2000,
-								didClose: () => {
-									window.location.reload();
-								}
+								showConfirmButton: false
+							}).then(() => {
+								window.location.reload();
 							});
 						}
 					})	
