@@ -1,6 +1,6 @@
 # VPN Users
 
-Este é um sistema de gerenciamento de usuários VPN desenvolvido em Python usando Flask. O sistema permite que administradores autorizados (membros do grupo vpn.admin.valorup) realizem as seguintes operações:
+Este é um sistema de gerenciamento de usuários VPN desenvolvido em Python usando Flask. O sistema permite que administradores autorizados (membros do grupo openvpn.admin) realizem as seguintes operações:
 
 - Login com autenticação de credenciais
 - Listagem de usuários por grupos
@@ -75,7 +75,7 @@ flowchart TD
 
 1. Clone o repositório:
     ```bash 
-    git clone https://github.com/valorup/vpn_users.git
+    git clone https://github.com/rodrigoadsilva/OpenVPN-User-Manager.git
     ```
 2. Instale as dependências:
     ```bash
@@ -94,5 +94,5 @@ flowchart TD
 
 ### Configuração
 
-- Ajuste as credenciais de acesso no arquivo .env conforme necessário.
-- Configure o arquivo de configuração do OpenVPN conforme necessário.
+- Ajuste os usuários e grupos no arquivo groups.txt conforme necessário.
+- Crie o grupo openvpn.admin e adicione um usuário nele para acessar o sistema.

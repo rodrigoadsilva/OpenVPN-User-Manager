@@ -20,7 +20,6 @@ def list_groups():
     except FileNotFoundError:
         return []  # Retorna lista vazia se o arquivo não for encontrado
 
-
 ######################### CRUD de usuários ###############################
 def create_user_and_add_to_group(username: str, password: str, groupname: str) -> bool:
     try:
@@ -133,7 +132,6 @@ def disable_user(username: str) -> bool:
         return False
 ##########################################################################
 
-
 ######################### ROUTES #########################################
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -149,9 +147,9 @@ def login():
 
             # Verifica a senha fornecida
             if crypt.crypt(password, hash_pw) == hash_pw:
-                 # Verifica se o usuário pertence ao grupo "vpn.admin.valorup"
+                 # Verifica se o usuário pertence ao grupo "openvpn.admin"
                 try:
-                    group_info = grp.getgrnam('vpn.admin.valorup')
+                    group_info = grp.getgrnam('openvpn.admin')
                     if username in group_info.gr_mem:
                         session['username'] = username
                         return redirect(url_for('vpn_users'))
@@ -287,8 +285,6 @@ def unlock_user():
         return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
 
 ##########################################################################
-
-
 
 
 if __name__ == '__main__':
