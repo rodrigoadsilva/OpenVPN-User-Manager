@@ -239,7 +239,8 @@ def add_user():
 @app.route('/remove_user', methods=['POST'])
 def remove_user():
     # if 'username' in session:
-    user = request.form['user']
+    data = request.get_json()  # Alterado para pegar dados JSON
+    user = data['user_to_delete']
     if delete_user(user):
         return jsonify({'success': True, 'message': 'Usuário deletado com sucesso'})
     else:
@@ -286,11 +287,6 @@ def unlock_user():
         return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
 
 ##########################################################################
-
-
-
-
-
 
 
 

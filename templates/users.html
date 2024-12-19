@@ -464,7 +464,7 @@
 				cancelButtonText: 'Cancelar'
 			}).then((result) => {
 				if (result.isConfirmed) {
-					fetch('/delete_user', {
+					fetch('/remove_user', {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json',
