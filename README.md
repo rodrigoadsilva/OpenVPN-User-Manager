@@ -21,35 +21,45 @@ O backend interage com o sistema operacional Linux para gerenciar os usuários e
 
 ```mermaid
 flowchart TD
-    A[Cliente] --> B{/login}
-    B -->|POST| C[Verificar Credenciais]
-    C -->|Sucesso| D[Verificar Grupo vpn.admin.valorup]
-    C -->|Falha| E[Flash: Credencial inválida]
-    D -->|Pertence| F[Redireciona para /vpn_users]
-    D -->|Não Pertence| G[Flash: Usuário não autorizado]
+    A[Início] --> B{Usuário Logado?}
+    B -->|Não| C[/Login/]
+    B -->|Sim| D[/VPN Users/]
+
+    C --> E{Autenticação}
+    E -->|Sucesso| F[Verifica Grupo vpn.admin.valorup]
+    E -->|Falha| G[Mensagem de Erro]
+    G --> C
     
-    A --> H{/get_users}
-    H --> I[Listar Grupos]
-    I --> J[Para cada grupo]
-    J --> K[Buscar membros]
-    K --> L[Retornar JSON com usuários]
+    F -->|Pertence| D
+    F -->|Não Pertence| H[Mensagem de Acesso Negado]
+    H --> C
+
+    D --> I{Ações Disponíveis}
     
-    A --> M{/add_user}
-    M -->|POST| N[create_user_and_add_to_group]
-    N -->|Sucesso| O[JSON: success true]
-    N -->|Falha| P[JSON: success false]
+    I --> J[Adicionar Usuário]
+    J --> K[/POST /add_user/]
     
-    A --> Q{/remove_user}
-    Q -->|POST| R[delete_user]
-    R --> S[check_user_in_groups]
-    S -->|Autorizado| T[Remover usuário]
-    S -->|Não Autorizado| U[Retornar false]
+    I --> L[Trocar Senha]
+    L --> M[/POST /change_password/]
     
-    A --> V{/change_password}
-    V -->|POST| W[change_user_password]
-    W --> X[check_user_in_groups]
-    X -->|Autorizado| Y[Alterar senha]
-    X -->|Não Autorizado| Z[Retornar false]
+    I --> N[Mudar Grupo]
+    N --> O[/POST /change_group/]
+    
+    I --> P[Desabilitar/Ativar]
+    P --> Q[/POST /lock_user/]
+    P --> R[/POST /unlock_user/]
+    
+    I --> S[Deletar Usuário]
+    S --> T[/POST /delete_user/]
+    
+    I --> U[Listar Usuários]
+    U --> V[/GET /get_users/]
+    
+    I --> W[Listar Grupos]
+    W --> X[/GET /get_groups/]
+    
+    D --> Y[/Logout/]
+    Y --> C
 ```
 
 

@@ -6,6 +6,7 @@
     <title>VPN User Manager | Login </title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
     <meta name="theme-color" content="#712cf9">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         html,
         body {
@@ -124,17 +125,15 @@
             <label for="floatingPassword">Senha</label>
           </div>
       
-          <button class="btn btn-primary w-100 py-2" type="submit">Entrar</button>
+          <button class="btn btn-primary w-100 py-2" type="submit"><i class="fas fa-sign-in-alt"></i> Entrar</button>
         </form>
         <!-- Exibir mensagens flash -->
         {% with messages = get_flashed_messages(with_categories=True) %}
             {% if messages %}
-                <hr>
-                <ul>
-                    {% for category, message in messages %}
-                        <li class="text-danger">{{ message }}</li>
-                    {% endfor %}
-                </ul>
+                {% for category, message in messages %}
+                  <hr>
+                  <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> {{ message }}</p>
+                {% endfor %}
             {% endif %}
         {% endwith %}
       </main>
