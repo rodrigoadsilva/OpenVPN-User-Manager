@@ -72,13 +72,14 @@ flowchart TD
     cd vpn_users
     pip install -r requirements.txt
     ```
-3. Configure o arquivo de configuração:
+3. Edite o arquivo groups.txt com os grupos que deseja gerenciar:
     ```bash
-    cp .env.example .env
+    cp groups.txt.example groups.txt
+    vim groups.txt
     ```
 4. Inicie o servidor:
     ```bash
-    python main.py
+    sudo python main.py
     ```
 
 ### Configuração

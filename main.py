@@ -13,7 +13,7 @@ app.secret_key = os.urandom(24)
 # Função para ler o arquivo de empresas (grupos)
 def list_groups():
     try:
-        with open('grupos.txt', 'r') as f:
+        with open('groups.txt', 'r') as f:
             # Lê todas as linhas, remove os espaços em branco ao redor e ignora linhas vazias
             grupos = [linha.strip() for linha in f.readlines() if linha.strip()]
         return grupos
@@ -90,18 +90,6 @@ def change_user_group(username: str, groupname: str) -> bool:
         print(f"Erro ao alterar o grupo do usuário '{username}': {e.stderr.decode()}")
         return False
 
-def enable_user(username: str) -> bool:
-    if not check_user_in_groups(username):
-        return False
-
-    try:
-        subprocess.run(["chpasswd", "-u", username], check=True)
-        print(f"Usuário '{username}' ativado com sucesso.")
-        return True
-    except subprocess.CalledProcessError as e:
-        print(f"Erro ao ativar o usuário '{username}': {e.stderr.decode()}")
-        return False
-
 def delete_user(username: str) -> bool:
     if not check_user_in_groups(username):
         return False
@@ -120,12 +108,24 @@ def delete_user(username: str) -> bool:
         print(f"Erro ao remover o usuário '{username}': {e.stderr.decode()}")
         return False
 
+def enable_user(username: str) -> bool:
+    if not check_user_in_groups(username):
+        return False
+
+    try:
+        subprocess.run(["sudo", "usermod", "--unlock", username], check=True)
+        print(f"Usuário '{username}' ativado com sucesso.")
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"Erro ao ativar o usuário '{username}': {e.stderr.decode()}")
+        return False
+
 def disable_user(username: str) -> bool:
     if not check_user_in_groups(username):
         return False
 
     try:
-        subprocess.run(["chpasswd", "-l", username], check=True)
+        subprocess.run(["sudo", "usermod", "--lock", username], check=True)
         print(f"Usuário '{username}' desabilitado com sucesso.")
         return True
     except subprocess.CalledProcessError as e:
@@ -296,4 +296,4 @@ def unlock_user():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=443, ssl_context=('./cert.pem', './key.pem'), debug=True)
+    app.run(host='0.0.0.0', port=443, ssl_context=('./ssl_certs/cert.pem', './ssl_certs/key.pem'), debug=True)
