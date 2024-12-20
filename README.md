@@ -26,7 +26,7 @@ flowchart TD
     B -->|Sim| D[/VPN Users/]
 
     C --> E{Autenticação}
-    E -->|Sucesso| F[Verifica Grupo vpn.admin.valorup]
+    E -->|Sucesso| F[Verifica Grupo openvpn.admin]
     E -->|Falha| G[Mensagem de Erro]
     G --> C
     
@@ -34,32 +34,39 @@ flowchart TD
     F -->|Não Pertence| H[Mensagem de Acesso Negado]
     H --> C
 
-    D --> I{Ações Disponíveis}
+    D --> I{Endpoints Disponíveis}
     
-    I --> J[Adicionar Usuário]
-    J --> K[/POST /add_user/]
-    
-    I --> L[Trocar Senha]
-    L --> M[/POST /change_password/]
-    
-    I --> N[Mudar Grupo]
-    N --> O[/POST /change_group/]
-    
-    I --> P[Desabilitar/Ativar]
-    P --> Q[/POST /lock_user/]
-    P --> R[/POST /unlock_user/]
-    
-    I --> S[Deletar Usuário]
-    S --> T[/POST /delete_user/]
-    
-    I --> U[Listar Usuários]
-    U --> V[/GET /get_users/]
-    
-    I --> W[Listar Grupos]
-    W --> X[/GET /get_groups/]
-    
-    D --> Y[/Logout/]
+    subgraph API [API Endpoints]
+        I --> J[Adicionar Usuário]
+        J --> K[/POST /add_user/]
+        
+        I --> L[Trocar Senha]
+        L --> M[/POST /change_password/]
+        
+        I --> N[Mudar Grupo]
+        N --> O[/POST /change_group/]
+        
+        I --> P[Gerenciar Status]
+        P --> Q[/POST /lock_user/]
+        P --> R[/POST /unlock_user/]
+        
+        I --> S[Deletar Usuário]
+        S --> T[/POST /remove_user/]
+        
+        I --> U[Listar Usuários]
+        U --> V[/GET /get_users/]
+        
+        I --> W[Listar Grupos]
+        W --> X[/GET /get_groups/]
+    end
+
+    D --> Y[/GET /logout/]
     Y --> C
+
+    subgraph Segurança [Verificações de Segurança]
+        Z[Todas as rotas verificam sessão ativa]
+        ZA[Operações de usuário verificam pertencimento aos grupos]
+    end
 ```
 
 
@@ -94,5 +101,6 @@ flowchart TD
 
 ### Configuração
 
-- Ajuste os usuários e grupos no arquivo groups.txt conforme necessário.
+- Adicione os grupos necessários no arquivo groups.txt.
+- Adicione os usuários nos grupos do arquivo groups.txt conforme necessário.
 - Crie o grupo openvpn.admin e adicione um usuário nele para acessar o sistema.
