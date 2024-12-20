@@ -4,6 +4,7 @@ import crypt # type: ignore
 import grp # type: ignore
 import os
 import subprocess
+import datetime
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -19,6 +20,17 @@ def list_groups():
         return grupos
     except FileNotFoundError:
         return []  # Retorna lista vazia se o arquivo não for encontrado
+
+# Função para registrar operações no arquivo de log
+def registrar_log(operacao: str, usuario_executante: str, detalhes: str) -> None:
+   """
+   Registra operações no arquivo de log
+   """
+   timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+   log_entry = f"[{timestamp}] {usuario_executante} - {operacao}: {detalhes}\n"
+   
+   with open('operacoes.log', 'a') as f:
+       f.write(log_entry)
 
 ######################### CRUD de usuários ###############################
 def create_user_and_add_to_group(username: str, password: str, groupname: str) -> bool:
@@ -222,49 +234,72 @@ def get_users():
 @app.route('/add_user', methods=['POST'])
 def add_user():
     if 'username' in session:
-        user = request.form['user']
-        password = request.form['pass']
-        group = request.form['group']
-
-        if create_user_and_add_to_group(user, password, group):
-            return jsonify({'success': True, 'message': 'Usuário criado com sucesso'})
-        else:
-            return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+       user = request.form['user']
+       password = request.form['pass']
+       group = request.form['group']
+       
+       if create_user_and_add_to_group(user, password, group):
+           registrar_log(
+               operacao="CRIAR_USUARIO",
+               usuario_executante=session['username'],
+               detalhes=f"Criou usuário '{user}' no grupo '{group}'"
+           )
+           return jsonify({'success': True, 'message': 'Usuário criado com sucesso'})
+       else:
+           return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
     return redirect(url_for('login'))
 
 @app.route('/remove_user', methods=['POST'])
 def remove_user():
     if 'username' in session:
-        data = request.get_json()  # Alterado para pegar dados JSON
-        user = data['user_to_delete']
-        if delete_user(user):
-            return jsonify({'success': True, 'message': 'Usuário deletado com sucesso'})
-        else:
-            return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+       data = request.get_json()
+       user = data['user_to_delete']
+       
+       if delete_user(user):
+           registrar_log(
+               operacao="REMOVER_USUARIO",
+               usuario_executante=session['username'],
+               detalhes=f"Removeu usuário '{user}'"
+           )
+           return jsonify({'success': True, 'message': 'Usuário deletado com sucesso'})
+       else:
+           return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
     return redirect(url_for('login'))
 
 @app.route('/change_password', methods=['POST'])
 def change_password():
     if 'username' in session:
-        data = request.get_json()  # Alterado para pegar dados JSON
-        user = data['change_password_user']
-        password = data['change_password_pass']
-        if change_user_password(user, password):
-            return jsonify({'success': True, 'message': 'Senha alterada com sucesso'})
-        else:
-            return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+       data = request.get_json()
+       user = data['change_password_user']
+       password = data['change_password_pass']
+       
+       if change_user_password(user, password):
+           registrar_log(
+               operacao="ALTERAR_SENHA",
+               usuario_executante=session['username'],
+               detalhes=f"Alterou senha do usuário '{user}'"
+           )
+           return jsonify({'success': True, 'message': 'Senha alterada com sucesso'})
+       else:
+           return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
     return redirect(url_for('login'))
     
 @app.route('/change_group', methods=['POST'])
 def change_group():
     if 'username' in session:
-        data = request.get_json()  # Alterado para pegar dados JSON
-        user = data['change_group_user']
-        group = data['change_group_group']
-        if change_user_group(user, group):
-            return jsonify({'success': True, 'message': 'Grupo alterado com sucesso'})
-        else:
-            return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+       data = request.get_json()
+       user = data['change_group_user']
+       group = data['change_group_group']
+       
+       if change_user_group(user, group):
+           registrar_log(
+               operacao="ALTERAR_GRUPO",
+               usuario_executante=session['username'],
+               detalhes=f"Alterou grupo do usuário '{user}' para '{group}'"
+           )
+           return jsonify({'success': True, 'message': 'Grupo alterado com sucesso'})
+       else:
+           return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
     return redirect(url_for('login'))
 
 @app.route('/lock_user', methods=['POST'])
@@ -273,6 +308,11 @@ def lock_user():
         data = request.get_json()  # Alterado para pegar dados JSON
         user = data['user_to_lock']
         if disable_user(user):
+            registrar_log(
+                operacao="BLOQUEAR_USUARIO",
+                usuario_executante=session['username'],
+                detalhes=f"Bloquear usuário '{user}'"
+            )
             return jsonify({'success': True, 'message': 'Usuário bloqueado com sucesso'})
         else:
             return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
@@ -284,6 +324,11 @@ def unlock_user():
         data = request.get_json()  # Alterado para pegar dados JSON
         user = data['user_to_unlock']
         if enable_user(user):
+            registrar_log(
+                operacao="DESBLOQUEAR_USUARIO",
+                usuario_executante=session['username'],
+                detalhes=f"Desbloquear usuário '{user}'"
+            )
             return jsonify({'success': True, 'message': 'Usuário ativado com sucesso'})
         else:
             return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
