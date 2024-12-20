@@ -171,121 +171,125 @@ def logout():
 
 @app.route('/vpn_users')
 def vpn_users():
-    # if 'username' in session:
-    #     username = session['username']  # Obtém o nome do usuário da sessão
-    #     return render_template('users.html', username=username)
-    # else:
-    #     return redirect(url_for('login'))
-    username = "ralves"
-    return render_template('users.html', username=username)
+    if 'username' in session:
+        username = session['username']  # Obtém o nome do usuário da sessão
+        return render_template('users.html', username=username)
+    else:
+        return redirect(url_for('login'))
 
 ######################### API ############################################
 
 @app.route('/get_groups', methods=['GET'])
 def get_groups():
-    return jsonify(list_groups())
+    if 'username' in session:
+        return jsonify(list_groups())
+    return redirect(url_for('login'))
 
 @app.route('/get_users', methods=['GET'])
 def get_users():
-    # if 'username' in session:
-    grupos = list_groups()  # Lê os grupos do arquivo
-    resultado = {}
+    if 'username' in session:
+        grupos = list_groups()  # Lê os grupos do arquivo
+        resultado = {}
 
-    for grupo in grupos:
-        try:
-            # Obtém informações sobre o grupo
-            info_grupo = grp.getgrnam(grupo)
-            # Para cada membro do grupo, cria um dicionário com informações do usuário
-            membros = []
-            for usuario in info_grupo.gr_mem:
-                try:
-                    # Verifica se o usuário está bloqueado verificando se a senha começa com '!'
-                    user_info = spwd.getspnam(usuario)
-                    status = not user_info.sp_pwdp.startswith('!')
-                    membros.append({
-                        'username': usuario,
-                        'active': status
-                    })
-                except KeyError:
-                    # Se não conseguir obter informações do usuário, assume que está inativo
-                    membros.append({
-                        'username': usuario,
-                        'active': False
-                    })
-            resultado[grupo] = membros
-        except KeyError:
-            # Se o grupo não existir, adiciona uma lista vazia
-            resultado[grupo] = []
-    return jsonify(resultado)  # Retorna o resultado como JSON
-    # else:
-    #     return redirect(url_for('login'))
+        for grupo in grupos:
+            try:
+                # Obtém informações sobre o grupo
+                info_grupo = grp.getgrnam(grupo)
+                # Para cada membro do grupo, cria um dicionário com informações do usuário
+                membros = []
+                for usuario in info_grupo.gr_mem:
+                    try:
+                        # Verifica se o usuário está bloqueado verificando se a senha começa com '!'
+                        user_info = spwd.getspnam(usuario)
+                        status = not user_info.sp_pwdp.startswith('!')
+                        membros.append({
+                            'username': usuario,
+                            'active': status
+                        })
+                    except KeyError:
+                        # Se não conseguir obter informações do usuário, assume que está inativo
+                        membros.append({
+                            'username': usuario,
+                            'active': False
+                        })
+                resultado[grupo] = membros
+            except KeyError:
+                # Se o grupo não existir, adiciona uma lista vazia
+                resultado[grupo] = []
+        return jsonify(resultado)  # Retorna o resultado como JSON
+    return redirect(url_for('login'))
 
 @app.route('/add_user', methods=['POST'])
 def add_user():
-    # if 'username' in session:
-    user = request.form['user']
-    password = request.form['pass']
-    group = request.form['group']
+    if 'username' in session:
+        user = request.form['user']
+        password = request.form['pass']
+        group = request.form['group']
 
-    if create_user_and_add_to_group(user, password, group):
-        return jsonify({'success': True, 'message': 'Usuário criado com sucesso'})
-    else:
-        return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
-    # else:
-    #     return redirect(url_for('login'))
+        if create_user_and_add_to_group(user, password, group):
+            return jsonify({'success': True, 'message': 'Usuário criado com sucesso'})
+        else:
+            return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+    return redirect(url_for('login'))
 
 @app.route('/remove_user', methods=['POST'])
 def remove_user():
-    # if 'username' in session:
-    data = request.get_json()  # Alterado para pegar dados JSON
-    user = data['user_to_delete']
-    if delete_user(user):
-        return jsonify({'success': True, 'message': 'Usuário deletado com sucesso'})
-    else:
-        return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
-    # else:
-    #     return redirect(url_for('login'))
+    if 'username' in session:
+        data = request.get_json()  # Alterado para pegar dados JSON
+        user = data['user_to_delete']
+        if delete_user(user):
+            return jsonify({'success': True, 'message': 'Usuário deletado com sucesso'})
+        else:
+            return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+    return redirect(url_for('login'))
 
 @app.route('/change_password', methods=['POST'])
 def change_password():
-    data = request.get_json()  # Alterado para pegar dados JSON
-    user = data['change_password_user']
-    password = data['change_password_pass']
-    if change_user_password(user, password):
-        return jsonify({'success': True, 'message': 'Senha alterada com sucesso'})
-    else:
-        return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+    if 'username' in session:
+        data = request.get_json()  # Alterado para pegar dados JSON
+        user = data['change_password_user']
+        password = data['change_password_pass']
+        if change_user_password(user, password):
+            return jsonify({'success': True, 'message': 'Senha alterada com sucesso'})
+        else:
+            return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+    return redirect(url_for('login'))
     
 @app.route('/change_group', methods=['POST'])
 def change_group():
-    data = request.get_json()  # Alterado para pegar dados JSON
-    user = data['change_group_user']
-    group = data['change_group_group']
-    if change_user_group(user, group):
-        return jsonify({'success': True, 'message': 'Grupo alterado com sucesso'})
-    else:
-        return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+    if 'username' in session:
+        data = request.get_json()  # Alterado para pegar dados JSON
+        user = data['change_group_user']
+        group = data['change_group_group']
+        if change_user_group(user, group):
+            return jsonify({'success': True, 'message': 'Grupo alterado com sucesso'})
+        else:
+            return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+    return redirect(url_for('login'))
 
 @app.route('/lock_user', methods=['POST'])
 def lock_user():
-    data = request.get_json()  # Alterado para pegar dados JSON
-    user = data['user_to_lock']
-    if disable_user(user):
-        return jsonify({'success': True, 'message': 'Usuário bloqueado com sucesso'})
-    else:
-        return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+    if 'username' in session:
+        data = request.get_json()  # Alterado para pegar dados JSON
+        user = data['user_to_lock']
+        if disable_user(user):
+            return jsonify({'success': True, 'message': 'Usuário bloqueado com sucesso'})
+        else:
+            return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+    return redirect(url_for('login'))
 
 @app.route('/unlock_user', methods=['POST'])
 def unlock_user():
-    data = request.get_json()  # Alterado para pegar dados JSON
-    user = data['user_to_unlock']
-    if enable_user(user):
-        return jsonify({'success': True, 'message': 'Usuário ativado com sucesso'})
-    else:
-        return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+    if 'username' in session:
+        data = request.get_json()  # Alterado para pegar dados JSON
+        user = data['user_to_unlock']
+        if enable_user(user):
+            return jsonify({'success': True, 'message': 'Usuário ativado com sucesso'})
+        else:
+            return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+    return redirect(url_for('login'))
 
 ##########################################################################
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=443, ssl_context=('./ssl_certs/cert.pem', './ssl_certs/key.pem'), debug=True)
