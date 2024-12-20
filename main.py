@@ -9,6 +9,8 @@ import datetime
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
+grupo_admin = 'openvpn.admin'
+
 ######################### FUNÇÕES BASICAS #########################################
 
 # Função para ler o arquivo de empresas (grupos)
@@ -161,7 +163,7 @@ def login():
             if crypt.crypt(password, hash_pw) == hash_pw:
                  # Verifica se o usuário pertence ao grupo "openvpn.admin"
                 try:
-                    group_info = grp.getgrnam('openvpn.admin')
+                    group_info = grp.getgrnam(grupo_admin)
                     if username in group_info.gr_mem:
                         session['username'] = username
                         return redirect(url_for('vpn_users'))
@@ -337,4 +339,4 @@ def unlock_user():
 ##########################################################################
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=443, ssl_context=('./ssl_certs/cert.pem', './ssl_certs/key.pem'), debug=True)
+    app.run(host='0.0.0.0', port=3223, ssl_context=('./ssl_certs/cert.pem', './ssl_certs/key.pem'), debug=True)
