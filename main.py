@@ -91,16 +91,18 @@ def change_user_password(username: str, password: str) -> bool:
         print(f"Erro ao definir a senha para o usuário '{username}': {e.stderr.decode()}")
         return False
 
-def change_user_group(username: str, groupname: str) -> bool:
+def change_user_group(username: str, groups: list) -> bool:
     if not check_user_in_groups(username):
         return False
 
     try:
-        subprocess.run(["usermod", "-G", groupname, username], check=True)
-        print(f"Grupo do usuário '{username}' alterado com sucesso para '{groupname}'.")
+        # Junta os grupos com vírgula para o comando usermod
+        groups_str = ','.join(groups)
+        subprocess.run(["usermod", "-G", groups_str, username], check=True)
+        print(f"Grupos do usuário '{username}' alterados com sucesso para '{groups_str}'.")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Erro ao alterar o grupo do usuário '{username}': {e.stderr.decode()}")
+        print(f"Erro ao alterar os grupos do usuário '{username}': {e.stderr.decode()}")
         return False
 
 def delete_user(username: str) -> bool:
@@ -201,37 +203,41 @@ def get_groups():
 
 @app.route('/get_users', methods=['GET'])
 def get_users():
-    if 'username' in session:
-        grupos = list_groups()  # Lê os grupos do arquivo
-        resultado = {}
+    if 'username' not in session:
+        return redirect(url_for('login'))
+        
+    grupos = list_groups()
+    usuarios = {}  # Dicionário para armazenar informações dos usuários
 
-        for grupo in grupos:
-            try:
-                # Obtém informações sobre o grupo
-                info_grupo = grp.getgrnam(grupo)
-                # Para cada membro do grupo, cria um dicionário com informações do usuário
-                membros = []
-                for usuario in info_grupo.gr_mem:
-                    try:
-                        # Verifica se o usuário está bloqueado verificando se a senha começa com '!'
+    for grupo in grupos:
+        try:
+            info_grupo = grp.getgrnam(grupo)
+            for usuario in info_grupo.gr_mem:
+                try:
+                    # Se usuário já existe no dicionário, apenas adiciona o grupo
+                    if usuario in usuarios:
+                        usuarios[usuario]['groups'].append(grupo)
+                    else:
+                        # Verifica se o usuário está bloqueado
                         user_info = spwd.getspnam(usuario)
                         status = not user_info.sp_pwdp.startswith('!')
-                        membros.append({
+                        usuarios[usuario] = {
                             'username': usuario,
-                            'active': status
-                        })
-                    except KeyError:
-                        # Se não conseguir obter informações do usuário, assume que está inativo
-                        membros.append({
+                            'active': status,
+                            'groups': [grupo]
+                        }
+                except KeyError:
+                    # Se não conseguir obter informações do usuário
+                    if usuario not in usuarios:
+                        usuarios[usuario] = {
                             'username': usuario,
-                            'active': False
-                        })
-                resultado[grupo] = membros
-            except KeyError:
-                # Se o grupo não existir, adiciona uma lista vazia
-                resultado[grupo] = []
-        return jsonify(resultado)  # Retorna o resultado como JSON
-    return redirect(url_for('login'))
+                            'active': False,
+                            'groups': [grupo]
+                        }
+        except KeyError:
+            continue
+
+    return jsonify(list(usuarios.values()))
 
 @app.route('/add_user', methods=['POST'])
 def add_user():
@@ -289,19 +295,19 @@ def change_password():
 @app.route('/change_group', methods=['POST'])
 def change_group():
     if 'username' in session:
-       data = request.get_json()
-       user = data['change_group_user']
-       group = data['change_group_group']
-       
-       if change_user_group(user, group):
-           registrar_log(
-               operacao="ALTERAR_GRUPO",
-               usuario_executante=session['username'],
-               detalhes=f"Alterou grupo do usuário '{user}' para '{group}'"
-           )
-           return jsonify({'success': True, 'message': 'Grupo alterado com sucesso'})
-       else:
-           return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+        data = request.get_json()
+        user = data['change_group_user']
+        groups = data['change_group_groups']
+        
+        if change_user_group(user, groups):
+            registrar_log(
+                operacao="ALTERAR_GRUPOS",
+                usuario_executante=session['username'],
+                detalhes=f"Alterou grupos do usuário '{user}' para '{', '.join(groups)}'"
+            )
+            return jsonify({'success': True, 'message': 'Grupos alterados com sucesso'})
+        else:
+            return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
     return redirect(url_for('login'))
 
 @app.route('/lock_user', methods=['POST'])
