@@ -14,6 +14,17 @@
 		body {
 			height: 100%;
 		}
+		.checkbox-group {
+			max-height: 200px;
+			overflow-y: auto;
+			border: 1px solid #dee2e6;
+			padding: 10px;
+			border-radius: 4px;
+		}
+
+		.form-check {
+			margin-bottom: 8px;
+		}
 	</style>
 </head>
 
@@ -61,21 +72,31 @@
 					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 				</div>
 				<div class="modal-body">
-					<form id="add_user_form">
+					<form id="addUserForm">
 						<div class="form-group">
 							<label for="user">Usuário</label>
-							<input type="text" class="form-control" id="user" name="user" required>	
+							<input type="text" class="form-control" id="user" name="user" required>
+						</div>
+						<div class="form-group">
 							<label for="pass">Senha</label>
-							<input type="password" class="form-control" id="pass" name="pass" required>	
-							<label for="group">Grupo</label>
-							<select class="form-control" id="group_select" name="group" required>
-							</select>
+							<div class="input-group">
+								<input type="password" class="form-control" id="pass" name="pass" required>
+								<button type="button" class="btn btn-secondary" onclick="gerarSenha()">
+									<i class="fas fa-dice"></i> Gerar Senha
+								</button>
+							</div>
+						</div>
+						<div class="form-group">
+							<label>Empresas</label>
+							<div id="groupCheckboxes" class="checkbox-group">
+								<!-- Checkboxes serão inseridos aqui via JavaScript -->
+							</div>
 						</div>
 					</form>
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times"></i> Cancelar</button>
-					<button type="button" class="btn btn-primary" onclick="add_user()"><i class="fas fa-plus"></i> Criar</button>
+					<button type="button" class="btn btn-primary" onclick="addUser()"><i class="fas fa-plus"></i> Criar</button>
 				</div>
 			</div>
 		</div>
@@ -140,6 +161,7 @@
 	<script>
 		// Global variables
 		document.addEventListener("DOMContentLoaded", function () {
+			// Carrega os usuários
 			fetch('/get_users')
 				.then(response => response.json())
 				.then(users => {
@@ -222,24 +244,8 @@
 				})
 				.catch(error => console.error('Erro ao buscar usuários:', error));
 		
-			fetch('/get_groups')
-				.then(response => response.json())
-				.then(data => {
-					console.log(data);
-					const select = document.getElementById('group_select');
-					const change_group_select = document.getElementById('change_group_select');
-					data.forEach(group => {
-						const group_option = document.createElement('option');
-						const change_group_option = document.createElement('option');
-						group_option.value = group;
-						group_option.textContent = group;
-						select.appendChild(group_option);
-						change_group_option.value = group;
-						change_group_option.textContent = group;
-						change_group_select.appendChild(change_group_option);
-					});
-				})
-				.catch(error => console.error('Erro ao buscar grupos:', error));
+			// Carrega os grupos para o modal de criação
+			loadGroups();
 		})
 
 		// Modals invocations
@@ -296,18 +302,25 @@
 		}
 
 		// Functions
-		function add_user() {
-			console.log('add_user');
-			const form = document.getElementById('add_user_form');
-			const formData = new FormData(form);
-			// Verifica se os campos estão preenchidos
-			const user = formData.get('user');
-			const pass = formData.get('pass');
-			const group = formData.get('group');
-			if (!user || !pass || !group) {
-				alert('Por favor, preencha todos os campos');
+		function addUser() {
+			const user = document.getElementById('user').value;
+			const pass = document.getElementById('pass').value;
+			const selectedGroups = Array.from(document.querySelectorAll('input[name="groups"]:checked'))
+				.map(checkbox => checkbox.value);
+
+			if (selectedGroups.length === 0) {
+				Swal.fire({
+					icon: 'error',
+					title: 'Erro',
+					text: 'Selecione pelo menos uma empresa'
+				});
 				return;
 			}
+
+			const formData = new FormData();
+			formData.append('user', user);
+			formData.append('pass', pass);
+			formData.append('groups', selectedGroups.join(','));
 
 			fetch('/add_user', {
 				method: 'POST',
@@ -317,22 +330,20 @@
 			.then(data => {
 				if (data.success) {
 					Swal.fire({
-						title: 'Usuário adicionado com sucesso',
 						icon: 'success',
-						timer: 2000,
-						didClose: () => {
-							window.location.reload();
-						}
+						title: 'Sucesso',
+						text: data.message
+					}).then(() => {
+						window.location.reload();
 					});
 				} else {
 					Swal.fire({
-						title: 'Erro ao adicionar usuário',
 						icon: 'error',
-						timer: 2000
+						title: 'Erro',
+						text: data.message
 					});
 				}
-			})
-			.catch(error => console.error('Erro ao adicionar usuário:', error));
+			});
 		}
 
 		function change_password() {
@@ -541,6 +552,70 @@
 					.catch(error => console.error('Erro ao deletar usuário:', error));
 				}
 			});
+		}
+
+		function gerarSenha() {
+			const caracteres = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+			const tamanhoSenha = 8;
+			let senha = '';
+			
+			// Garante pelo menos um número
+			senha += '0123456789'.charAt(Math.floor(Math.random() * 10));
+			
+			// Garante pelo menos uma letra maiúscula
+			senha += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.charAt(Math.floor(Math.random() * 26));
+			
+			// Completa o resto da senha
+			for (let i = senha.length; i < tamanhoSenha; i++) {
+				senha += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+			}
+			
+			// Embaralha a senha
+			senha = senha.split('').sort(() => Math.random() - 0.5).join('');
+			
+			// Atualiza o campo de senha
+			document.getElementById('pass').value = senha;
+			
+			// Mostra a senha gerada em um alerta
+			Swal.fire({
+				title: 'Senha Gerada',
+				text: senha,
+				icon: 'info',
+				confirmButtonText: 'Copiar e Fechar',
+			}).then((result) => {
+				if (result.isConfirmed) {
+					navigator.clipboard.writeText(senha);
+					Swal.fire({
+						title: 'Senha Copiada!',
+						icon: 'success',
+						timer: 1500,
+						showConfirmButton: false
+					});
+				}
+			});
+		}
+
+		function loadGroups() {
+			fetch('/get_groups')
+				.then(response => response.json())
+				.then(groups => {
+					const groupCheckboxes = document.getElementById('groupCheckboxes');
+					groupCheckboxes.innerHTML = ''; // Limpa os checkboxes existentes
+					
+					groups.forEach(group => {
+						const div = document.createElement('div');
+						div.className = 'form-check';
+						
+						div.innerHTML = `
+							<input class="form-check-input" type="checkbox" name="groups" value="${group}" id="group_${group}">
+							<label class="form-check-label" for="group_${group}">
+								${group}
+							</label>
+						`;
+						
+						groupCheckboxes.appendChild(div);
+					});
+				});
 		}
 
 	</script>

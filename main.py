@@ -163,7 +163,7 @@ def login():
 
             # Verifica a senha fornecida
             if crypt.crypt(password, hash_pw) == hash_pw:
-                 # Verifica se o usuário pertence ao grupo "openvpn.admin"
+                # Verifica se o usuário pertence ao grupo "openvpn.admin"
                 try:
                     group_info = grp.getgrnam(grupo_admin)
                     if username in group_info.gr_mem:
@@ -242,19 +242,34 @@ def get_users():
 @app.route('/add_user', methods=['POST'])
 def add_user():
     if 'username' in session:
-       user = request.form['user']
-       password = request.form['pass']
-       group = request.form['group']
-       
-       if create_user_and_add_to_group(user, password, group):
-           registrar_log(
-               operacao="CRIAR_USUARIO",
-               usuario_executante=session['username'],
-               detalhes=f"Criou usuário '{user}' no grupo '{group}'"
-           )
-           return jsonify({'success': True, 'message': 'Usuário criado com sucesso'})
-       else:
-           return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
+        user = request.form['user']
+        password = request.form['pass']
+        groups = request.form['groups'].split(',')
+        
+        # Cria o usuário com o primeiro grupo
+        if create_user_and_add_to_group(user, password, groups[0]):
+            # Se houver mais grupos, adiciona o usuário a eles
+            if len(groups) > 1:
+                if change_user_group(user, groups):
+                    registrar_log(
+                        operacao="CRIAR_USUARIO",
+                        usuario_executante=session['username'],
+                        detalhes=f"Criou usuário '{user}' nos grupos '{', '.join(groups)}'"
+                    )
+                    return jsonify({'success': True, 'message': 'Usuário criado com sucesso'})
+                else:
+                    # Se falhar ao adicionar aos grupos adicionais, remove o usuário
+                    delete_user(user)
+                    return jsonify({'success': False, 'message': 'Erro ao adicionar grupos adicionais'})
+            else:
+                registrar_log(
+                    operacao="CRIAR_USUARIO",
+                    usuario_executante=session['username'],
+                    detalhes=f"Criou usuário '{user}' no grupo '{groups[0]}'"
+                )
+                return jsonify({'success': True, 'message': 'Usuário criado com sucesso'})
+        else:
+            return jsonify({'success': False, 'message': 'Erro ao criar usuário'})
     return redirect(url_for('login'))
 
 @app.route('/remove_user', methods=['POST'])
