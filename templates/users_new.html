@@ -206,8 +206,16 @@
 	<!-- Navbar -->
 	<nav class="navbar navbar-expand-lg navbar-future">
 		<div class="container-fluid">
-			<span class="navbar-brand">Bem vindo! Você está logado como <b>{{ username }}</b>.</span>
+			<span class="navbar-brand">
+				<a class="navbar-brand" href="#">
+					<img src="{{ url_for('static', filename='img/brand.png') }}" alt="Logo do sistema" class="rounded" width="32" height="34">
+				</a>
+				Bem vindo! Você está logado como <b>{{ username }}</b>.
+			</span>
 			<div class="d-flex">
+				<!-- <button type="button" class="btn btn-custom mx-2" data-bs-toggle="modal" data-bs-target="#adminsModal">
+						<i class="fas fa-plus"></i> Admins
+				</button> -->
 				<a class="btn btn-danger" href="/logout"><i class="fas fa-sign-out-alt"></i> Sair</a>
 			</div>
 		</div>
@@ -243,6 +251,37 @@
 			</div>
 		</div>
 	</main>
+
+	<!-- Modal Admin Users-->
+	<div class="modal fade" id="adminsModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="adminsModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h1 class="modal-title fs-5" id="adminsModalLabel">Administradores</h1>
+					<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<div class="table-responsive">
+						<table id="table" class="table table-borderless">
+							<thead>
+								<tr>
+									<th scope="col">Usuário</th>
+									<th scope="col">Status</th>
+									<th scope="col" class="text-center">Ações</th>
+								</tr>
+							</thead>
+							<tbody id="usuariosTb">
+							</tbody>
+						</table>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times"></i> Cancelar</button>
+					<button type="button" class="btn btn-primary" onclick="addUser()"><i class="fas fa-plus"></i> Criar</button>
+				</div>
+			</div>
+		</div>
+	</div>
 
 	<!-- Modal Create User-->
 	<div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
@@ -295,7 +334,12 @@
 						<label for="change_password_user" class="form-label">Usuário</label>
 						<input type="text" class="form-control" id="change_password_user" name="user" required disabled>
 						<label for="change_password_pass" class="form-label mt-3">Senha</label>
-						<input type="password" class="form-control" id="change_password_pass" name="pass" required>
+						<div class="input-group">
+							<input type="password" class="form-control" id="change_password_pass" name="pass" required>
+							<button type="button" class="btn btn-secondary" onclick="gerarSenha('change_password_pass')">
+								<i class="fas fa-dice"></i> Gerar Senha
+							</button>
+						</div>
 					</div>
 				</div>
 				<div class="modal-footer">
@@ -426,6 +470,19 @@
 		
 			// Carrega os grupos para o modal de criação
 			loadGroups();
+
+			fetch('get_admins')
+				.then(response => response.json())
+				.then(admins => {
+					const adminsModalBody = document.querySelector('#adminsModal .modal-body');
+					const adminList = document.createElement('ul');
+					admins.forEach(admin => {
+						const listItem = document.createElement('li');
+						listItem.textContent = admin;
+						adminList.appendChild(listItem);
+					});
+					adminsModalBody.appendChild(adminList);
+				});
 		})
 
 		// Modals invocations
@@ -734,7 +791,7 @@
 			});
 		}
 
-		function gerarSenha() {
+		function gerarSenha(element) {
 			const caracteres = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
 			const tamanhoSenha = 8;
 			let senha = '';
@@ -754,7 +811,7 @@
 			senha = senha.split('').sort(() => Math.random() - 0.5).join('');
 			
 			// Atualiza o campo de senha
-			document.getElementById('pass').value = senha;
+			document.getElementById(element).value = senha;
 			
 			// Mostra a senha gerada em um alerta
 			Swal.fire({

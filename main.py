@@ -150,6 +150,10 @@ def disable_user(username: str) -> bool:
 
 ######################### ROUTES #########################################
 
+@app.route('/')
+def index():
+    return redirect(url_for('login'))
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
@@ -178,7 +182,7 @@ def login():
         except KeyError:
             flash('Falha no login. Usuário não existe.')
 
-    return render_template('login_screen.html')
+    return render_template('login_screen_new.html')
 
 @app.route('/logout')
 def logout():
@@ -189,7 +193,7 @@ def logout():
 def vpn_users():
     if 'username' in session:
         username = session['username']  # Obtém o nome do usuário da sessão
-        return render_template('users.html', username=username)
+        return render_template('users_new.html', username=username)
     else:
         return redirect(url_for('login'))
 
@@ -200,6 +204,18 @@ def get_groups():
     if 'username' in session:
         return jsonify(list_groups())
     return redirect(url_for('login'))
+
+@app.route('/get_admins', methods=['GET'])
+def get_admins():
+    if 'username' not in session:
+        return redirect(url_for('login'))
+        
+    try:
+        group_info = grp.getgrnam(grupo_admin)
+        admins = group_info.gr_mem
+        return jsonify(admins)
+    except KeyError:
+        return jsonify([])  # Retorna lista vazia se o grupo não existir
 
 @app.route('/get_users', methods=['GET'])
 def get_users():
@@ -213,29 +229,31 @@ def get_users():
         try:
             info_grupo = grp.getgrnam(grupo)
             for usuario in info_grupo.gr_mem:
+                # Se já existe no dict, só acrescenta grupo
+                if usuario in usuarios:
+                    usuarios[usuario]['groups'].append(grupo)
+                    continue
+
+                # Determinar se o usuário está ativo
                 try:
-                    # Se usuário já existe no dicionário, apenas adiciona o grupo
-                    if usuario in usuarios:
-                        usuarios[usuario]['groups'].append(grupo)
-                    else:
-                        # Verifica se o usuário está bloqueado
-                        user_info = spwd.getspnam(usuario)
-                        status = not user_info.sp_pwdp.startswith('!')
-                        usuarios[usuario] = {
-                            'username': usuario,
-                            'active': status,
-                            'groups': [grupo]
-                        }
+                    user_info = spwd.getspnam(usuario)
+                    status = not user_info.sp_pwdp.startswith('!')
                 except KeyError:
-                    # Se não conseguir obter informações do usuário
-                    if usuario not in usuarios:
-                        usuarios[usuario] = {
-                            'username': usuario,
-                            'active': False,
-                            'groups': [grupo]
-                        }
+                    # Shadow não existe. Verificar se existe no passwd.
+                    try:
+                        pwd.getpwnam(usuario)
+                        status = True  # Existe como conta válida
+                    except KeyError:
+                        status = False  # Não existe no sistema
+
+                usuarios[usuario] = {
+                    'username': usuario,
+                    'active': status,
+                    'groups': [grupo]
+                }
+
         except KeyError:
-            continue
+            pass # Grupo não existe, ignora
 
     return jsonify(list(usuarios.values()))
 
