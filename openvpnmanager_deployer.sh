@@ -162,7 +162,7 @@ show_groups_file() {
     echo "|"
     echo "|"
     echo "|"
-    echo "=============================================="
+    echo -e "${YELLOW}=============================================="
     echo "Este sistema utiliza grupos para acesso do mesmo e gerenciar os usuarios de VPN."
     echo "Os usuários que terão acesso ao OpenVPN User Manager devem estar vinculados ao grupo ${GROUP_ADMIN}."
     echo "Os grupos estao listados no arquivo ${GROUPS_FILE}"
@@ -174,19 +174,22 @@ show_groups_file() {
     else
         echo "(arquivo ${GROUPS_FILE} nao existe)"
     fi
-    echo "=============================================="
+    echo "==============================================${NC}"
 }
 
 interactive_group_menu() {
+    systemctl stop ${SERVICE_NAME}
     # Menu interativo para gerenciamento de grupos
     p=0
     while true; do
+        echo "|"
+        echo "|"
         echo "============== Ajuste de grupos ================"
         echo ""
         echo "Escolha uma das opcoes abaixo:"
         echo "1 - Adicionar um usuário ao grupo ${GROUP_ADMIN}"
-        echo "2 - Limpar e usar apenas o grupo user-vpn"
-        echo "3 - Limpar e adicionar grupos ao sistema"
+        echo "2 - Limpar o arquivo de grupos e usar apenas o grupo user-vpn"
+        echo "3 - Limpar o arquivo de grupos e adicionar grupos ao sistema"
         echo "4 - Sair"
         echo ""
         read -r -p "Digite a opcao desejada: " p
@@ -214,6 +217,10 @@ interactive_group_menu() {
                 echo "Resetando e adicionando grupos ao sistema..."
                 echo "" > "${GROUPS_FILE}"
                 read -r -p "Digite o nome dos grupos separados por espaco (ex: financeiro-vpn comercial-vpn): " grupos
+                if [ -z "$grupos" ]; then
+                    warn "Nenhum grupo digitado. Voltando ao menu."
+                    continue
+                fi
                 for grupo in $grupos; do
                     if getent group "$grupo" >/dev/null; then
                         warn "Grupo $grupo ja existe"
@@ -225,6 +232,7 @@ interactive_group_menu() {
                 ;;
             4)
                 echo "Saindo do menu de grupos..."
+                systemctl start ${SERVICE_NAME}
                 break
                 ;;
             *)
