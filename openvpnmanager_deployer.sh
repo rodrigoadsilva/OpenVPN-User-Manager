@@ -200,7 +200,7 @@ show_groups_file() {
     else
         echo "(arquivo ${APP_DIR}/${GROUPS_FILE} nao existe)"
     fi
-    echo -e "${YELLOW}============================================== ${NC}"
+    echo -e "\n${YELLOW}============================================== ${NC}"
 }
 
 interactive_group_menu() {
