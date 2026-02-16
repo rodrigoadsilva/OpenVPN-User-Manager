@@ -195,10 +195,10 @@ show_groups_file() {
     echo "Cada grupo deve ser adicionado ao sistema para que os usuarios possam ser vinculados a eles."
     echo ""
     echo "Conteudo do arquivo ${GROUPS_FILE}:"
-    if [ -f "${GROUPS_FILE}" ]; then
-        cat "${GROUPS_FILE}"
+    if [ -f "${APP_DIR}/${GROUPS_FILE}" ]; then
+        cat "${APP_DIR}/${GROUPS_FILE}"
     else
-        echo "(arquivo ${GROUPS_FILE} nao existe)"
+        echo "(arquivo ${APP_DIR}/${GROUPS_FILE} nao existe)"
     fi
     echo -e "${YELLOW}============================================== ${NC}"
 }
