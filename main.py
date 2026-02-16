@@ -1,13 +1,21 @@
-from flask import Flask, request, redirect, url_for, session, render_template, jsonify, flash # type: ignore
-import spwd # type: ignore
-import crypt # type: ignore
-import grp # type: ignore
+from flask import Flask, request, redirect, url_for, session, render_template, jsonify, flash
+import spwd
+import crypt
+import grp
 import os
 import subprocess
 import datetime
+import logging
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
+
+# Configura logging para debug em arquivo separado
+logging.basicConfig(
+    filename='debug.log',
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+)
 
 grupo_admin = 'openvpn.admin'
 
@@ -38,15 +46,17 @@ def registrar_log(operacao: str, usuario_executante: str, detalhes: str) -> None
 def create_user_and_add_to_group(username: str, password: str, groupname: str) -> bool:
     try:
         # Cria o usuário e o adiciona ao grupo
+        logging.debug(f"Criando usuário '{username}' no grupo '{groupname}'")
         subprocess.run(
             ["useradd", "-m", "-G", groupname, username],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        print(f"Usuário '{username}' criado e adicionado ao grupo '{groupname}' com sucesso.")
-        
+        logging.info(f"Usuário '{username}' criado e adicionado ao grupo '{groupname}'.")
+
         # Define a senha do usuário
+        logging.debug(f"Definindo senha para usuário '{username}'")
         subprocess.run(
             ["chpasswd"],
             input=f"{username}:{password}".encode(),
@@ -54,10 +64,16 @@ def create_user_and_add_to_group(username: str, password: str, groupname: str) -
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        print(f"Senha para o usuário '{username}' definida com sucesso.")
+        logging.info(f"Senha para o usuário '{username}' definida com sucesso.")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"Erro ao criar o usuário ou configurar senha: {e.stderr.decode()}")
+        stderr = ''
+        try:
+            stderr = e.stderr.decode()
+        except Exception:
+            stderr = str(e)
+        logging.error(f"Erro ao criar o usuário ou configurar senha para '{username}': {stderr}")
+        logging.debug("CalledProcessError details:", exc_info=True)
         return False
 
 def check_user_in_groups(username: str) -> bool:
@@ -260,34 +276,60 @@ def get_users():
 @app.route('/add_user', methods=['POST'])
 def add_user():
     if 'username' in session:
-        user = request.form['user']
-        password = request.form['pass']
-        groups = request.form['groups'].split(',')
-        
-        # Cria o usuário com o primeiro grupo
-        if create_user_and_add_to_group(user, password, groups[0]):
-            # Se houver mais grupos, adiciona o usuário a eles
-            if len(groups) > 1:
-                if change_user_group(user, groups):
+        try:
+            user = request.form['user']
+            password = request.form['pass']
+            groups = request.form['groups'].split(',')
+
+            logging.debug(f"/add_user chamado por '{session['username']}' -> user='{user}', groups={groups}")
+
+            # Cria o usuário com o primeiro grupo
+            if create_user_and_add_to_group(user, password, groups[0]):
+                # Se houver mais grupos, adiciona o usuário a eles
+                if len(groups) > 1:
+                    if change_user_group(user, groups):
+                        registrar_log(
+                            operacao="CRIAR_USUARIO",
+                            usuario_executante=session['username'],
+                            detalhes=f"Criou usuário '{user}' nos grupos '{', '.join(groups)}'"
+                        )
+                        logging.info(f"Usuário '{user}' criado nos grupos {groups} com sucesso")
+                        return jsonify({'success': True, 'message': 'Usuário criado com sucesso'})
+                    else:
+                        # Se falhar ao adicionar aos grupos adicionais, remove o usuário
+                        logging.error(f"Falha ao adicionar '{user}' aos grupos adicionais: {groups}")
+                        delete_user(user)
+                        registrar_log(
+                            operacao="ERRO_CRIAR_USUARIO",
+                            usuario_executante=session['username'],
+                            detalhes=f"Falha ao adicionar '{user}' aos grupos adicionais {', '.join(groups)}"
+                        )
+                        return jsonify({'success': False, 'message': 'Erro ao adicionar grupos adicionais'})
+                else:
                     registrar_log(
                         operacao="CRIAR_USUARIO",
                         usuario_executante=session['username'],
-                        detalhes=f"Criou usuário '{user}' nos grupos '{', '.join(groups)}'"
+                        detalhes=f"Criou usuário '{user}' no grupo '{groups[0]}'"
                     )
+                    logging.info(f"Usuário '{user}' criado no grupo {groups[0]} com sucesso")
                     return jsonify({'success': True, 'message': 'Usuário criado com sucesso'})
-                else:
-                    # Se falhar ao adicionar aos grupos adicionais, remove o usuário
-                    delete_user(user)
-                    return jsonify({'success': False, 'message': 'Erro ao adicionar grupos adicionais'})
             else:
+                logging.error(f"create_user_and_add_to_group retornou False para usuário '{user}'")
                 registrar_log(
-                    operacao="CRIAR_USUARIO",
+                    operacao="ERRO_CRIAR_USUARIO",
                     usuario_executante=session['username'],
-                    detalhes=f"Criou usuário '{user}' no grupo '{groups[0]}'"
+                    detalhes=f"Erro ao criar usuário '{user}' no grupo '{groups[0]}'"
                 )
-                return jsonify({'success': True, 'message': 'Usuário criado com sucesso'})
-        else:
-            return jsonify({'success': False, 'message': 'Erro ao criar usuário'})
+                return jsonify({'success': False, 'message': 'Erro ao criar usuário'})
+        except Exception as exc:
+            logging.exception(f"Exceção inesperada no endpoint /add_user: {exc}")
+            # Registrar falha geral
+            registrar_log(
+                operacao="ERRO_CRIAR_USUARIO",
+                usuario_executante=session.get('username', 'desconhecido'),
+                detalhes=f"Exceção ao criar usuário: {str(exc)}"
+            )
+            return jsonify({'success': False, 'message': 'Erro interno ao criar usuário'})
     return redirect(url_for('login'))
 
 @app.route('/remove_user', methods=['POST'])
