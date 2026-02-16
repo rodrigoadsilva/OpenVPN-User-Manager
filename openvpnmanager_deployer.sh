@@ -23,6 +23,10 @@ GROUP_ADMIN="openvpn.admin"
 GROUPS_FILE="groups.txt"
 NON_INTERACTIVE=0
 
+# Forçar modo não-interativo do APT para evitar prompts de configuração/reinício
+export DEBIAN_FRONTEND=noninteractive
+export APT_LISTCHANGES_FRONTEND=none
+
 on_error() {
     local rc=$?
     echo -e "${RED}${ERRO} Erro no script. Saindo (codigo: $rc)${NC}"
@@ -58,8 +62,10 @@ ensure_root() {
 
 install_deps() {
     log "Instalando dependencias..."
-    apt update -y
-    apt install -y git python3-pip || { echo -e "${ERRO} Erro ao instalar dependências.${NC}"; exit 1; }
+    # use apt-get com opções para evitar prompts de configuração e reinício de serviços
+    apt-get update -y
+    apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" \
+        install --no-install-recommends git python3-pip python3-venv || { echo -e "${ERRO} Erro ao instalar dependências.${NC}"; exit 1; }
     info "Dependencias instaladas"
 }
 
@@ -73,8 +79,28 @@ install_app() {
         git clone "$REPO_URL" "$APP_DIR"
     fi
 
+    # Criar virtualenv (venv) e instalar pacotes no venv
+    log "Preparando virtualenv em ${APP_DIR}/venv..."
+    if [ ! -d "${APP_DIR}/venv" ]; then
+        python3 -m venv "${APP_DIR}/venv" || { echo -e "${ERRO} Falha ao criar venv.${NC}"; exit 1; }
+        info "Virtualenv criado"
+    else
+        log "Virtualenv ja existe, atualizando pip se necessario..."
+    fi
+
+    VENV_PY="${APP_DIR}/venv/bin/python"
+    VENV_PIP="${APP_DIR}/venv/bin/pip"
+
+    # Garantir pip/packaging atualizados no venv
+    "${VENV_PY}" -m pip install --upgrade pip setuptools wheel >/dev/null || { echo -e "${ERRO} Erro ao atualizar pip no venv.${NC}"; exit 1; }
+
     log "Instalando requisitos..."
-    pip3 install --break-system-packages -r "$APP_DIR/requirements.txt"
+    if [ -f "$APP_DIR/requirements.txt" ]; then
+        # Instala dentro do venv
+        "${VENV_PIP}" install --no-cache-dir -r "$APP_DIR/requirements.txt" || { echo -e "${ERRO} Erro ao instalar requisitos Python no venv.${NC}"; exit 1; }
+    else
+        warn "Arquivo de requirements nao encontrado em $APP_DIR, pulando instalacao de pacotes Python"
+    fi
     info "Aplicação instalada em $APP_DIR"
 }
 
@@ -89,7 +115,7 @@ After=network.target
 Type=simple
 User=root
 Group=root
-ExecStart=/usr/bin/python3 ${APP_DIR}/main.py
+ExecStart=${APP_DIR}/venv/bin/python ${APP_DIR}/main.py
 Restart=on-failure
 RestartSec=5
 WorkingDirectory=${APP_DIR}
@@ -174,7 +200,7 @@ show_groups_file() {
     else
         echo "(arquivo ${GROUPS_FILE} nao existe)"
     fi
-    echo "==============================================${NC}"
+    echo -e "${YELLOW}============================================== ${NC}"
 }
 
 interactive_group_menu() {
@@ -188,7 +214,7 @@ interactive_group_menu() {
         echo ""
         echo "Escolha uma das opcoes abaixo:"
         echo "1 - Adicionar um usuário ao grupo ${GROUP_ADMIN}"
-        echo "2 - Limpar o arquivo de grupos e usar apenas o grupo user-vpn"
+        echo "2 - Limpar o arquivo de grupos e usar apenas o grupo user.vpn"
         echo "3 - Limpar o arquivo de grupos e adicionar grupos ao sistema"
         echo "4 - Sair"
         echo ""
@@ -202,21 +228,38 @@ interactive_group_menu() {
                     usermod -aG "$GROUP_ADMIN" "$USERNAME" && info "Usuario $USERNAME adicionado ao grupo ${GROUP_ADMIN}" || error "Erro ao adicionar o usuario"
                 else
                     echo -e "${YELLOW}Usuario '$USERNAME' NAO existe.${NC}"
+                    echo -n "Deseja criar o usuario '$USERNAME' e adiciona-lo ao grupo ${GROUP_ADMIN}? (s/n): "
+                    read -r resposta
+                    if [[ "$resposta" =~ ^[Ss]$ ]]; then
+                        if useradd -m "$USERNAME"; then
+                            info "Usuario $USERNAME criado"
+                            # Define a senha solicitada (Mudar@123)
+                            printf '%s:%s\n' "$USERNAME" 'Mudar@123' | chpasswd && info "Senha definida para $USERNAME" || error "Erro ao definir senha para $USERNAME"
+                        else
+                            error "Erro ao criar o usuario"
+                            continue
+                        fi
+                        usermod -aG "$GROUP_ADMIN" "$USERNAME" && info "Usuario $USERNAME adicionado ao grupo ${GROUP_ADMIN}" || error "Erro ao adicionar o usuario"
+                    else
+                        warn "Usuario '$USERNAME' nao criado nem adicionado ao grupo ${GROUP_ADMIN}"
+                    fi
                 fi
                 ;;
             2)
                 echo "Resetando e adicionando grupo ao sistema..."
                 echo "" > "${GROUPS_FILE}"
-                if ! getent group user-vpn >/dev/null; then
-                    groupadd user-vpn
+                if ! getent group user.vpn >/dev/null; then
+                    groupadd user.vpn && info "Grupo user.vpn criado" || error "Erro ao criar grupo user.vpn"
+                else
+                    info "Grupo user.vpn ja existe"
                 fi
-                echo "user-vpn" >> "${GROUPS_FILE}"
-                info "Grupo user-vpn preparado"
+                echo "user.vpn" >> "${GROUPS_FILE}"
+                info "Grupo user.vpn preparado"
                 ;;
             3)
                 echo "Resetando e adicionando grupos ao sistema..."
                 echo "" > "${GROUPS_FILE}"
-                read -r -p "Digite o nome dos grupos separados por espaco (ex: financeiro-vpn comercial-vpn): " grupos
+                read -r -p "Digite o nome dos grupos separados por espaco (ex: financeiro.vpn comercial.vpn): " grupos
                 if [ -z "$grupos" ]; then
                     warn "Nenhum grupo digitado. Voltando ao menu."
                     continue
