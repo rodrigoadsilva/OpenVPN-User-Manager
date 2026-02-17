@@ -257,7 +257,7 @@ def get_users():
                 except KeyError:
                     # Shadow não existe. Verificar se existe no passwd.
                     try:
-                        pwd.getpwnam(usuario)
+                        pwd.getpwnam(usuario)  # type: ignore
                         status = True  # Existe como conta válida
                     except KeyError:
                         status = False  # Não existe no sistema
