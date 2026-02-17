@@ -924,11 +924,20 @@
 		}
 		
 		function gerarSenha(element) {
-
+			// Validação para garantir que pelo menos um tipo de caractere foi selecionado
+			if (!passGenLowercase && !passGenUppercase && !passGenNumbers) {
+				Swal.fire({
+					icon: 'error',
+					title: 'Configuração Inválida',
+					text: 'Selecione pelo menos um tipo de caractere nas configurações do GenPass.'
+				});
+				return;
+			}
+			
 			let senha = '';
 			const tamanhoSenha = passGenCaracters;
 			
-			const caracteres = '';
+			let caracteres = '';
 			if (passGenLowercase){
 				caracteres += 'abcdefghijklmnopqrstuvwxyz';
 				senha += 'abcdefghijklmnopqrstuvwxyz'.charAt(Math.floor(Math.random() * 26));
