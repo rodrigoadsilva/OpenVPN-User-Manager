@@ -539,7 +539,7 @@
 					// Inicializa o DataTable
 					var table = document.getElementById('table');
 					var options = {
-						perPage: 10,
+						perPage: 8,
 						perPageSelect: [5, 8, 10, 12, 15]
 					};
 					var dataTable = new DataTable(table, options);
@@ -897,7 +897,7 @@
 			passGenLowercase = elPassGenLowercase.checked;
 			passGenUppercase = elPassGenUppercase.checked;
 			passGenNumbers = elPassGenNumbers.checked;
-			fetch('/set_genpass_config', {
+			fetch('/change_genpass_config', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
