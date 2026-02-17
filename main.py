@@ -43,6 +43,7 @@ def registrar_log(operacao: str, usuario_executante: str, detalhes: str) -> None
        f.write(log_entry)
 
 ######################### CRUD de usuários ###############################
+
 def create_user_and_add_to_group(username: str, password: str, groupname: str) -> bool:
     try:
         # Cria o usuário e o adiciona ao grupo
@@ -162,6 +163,49 @@ def disable_user(username: str) -> bool:
     except subprocess.CalledProcessError as e:
         print(f"Erro ao desabilitar o usuário '{username}': {e.stderr.decode()}")
         return False
+    
+##########################################################################
+
+############### CONFIGURAÇÃO DE GERAÇÃO DE SENHA #########################
+def get_genpass_config():
+    config = {
+        'length': 12,
+        'lowercase': True,
+        'uppercase': True,
+        'numbers': True,
+    }
+
+    try:
+        with open('genpass.conf', 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue  # Ignora linhas vazias e comentários
+                key, value = line.split('=')
+                key = key.strip().lower()
+                value = value.strip().lower()
+                
+                if key == 'length':
+                    config['length'] = int(value)
+                elif key in ['lowercase', 'uppercase', 'numbers']:
+                    config[key] = value == 'true'
+
+        return config
+    except FileNotFoundError:
+        return config  # Retorna configuração padrão se o arquivo não for encontrado
+    
+def change_genpass_config(length: int, lowercase: bool, uppercase: bool, numbers: bool) -> bool:
+    try:
+        with open('genpass.conf', 'w') as f:
+            f.write(f"LENGTH={length}\n")
+            f.write(f"LOWERCASE={'true' if lowercase else 'false'}\n")
+            f.write(f"UPPERCASE={'true' if uppercase else 'false'}\n")
+            f.write(f"NUMBERS={'true' if numbers else 'false'}\n")
+        return True
+    except Exception as e:
+        print(f"Erro ao salvar a configuração de geração de senha: {e}")
+        return False
+
 ##########################################################################
 
 ######################### ROUTES #########################################
@@ -416,6 +460,24 @@ def unlock_user():
         else:
             return jsonify({'success': False, 'message': 'Erro, veja o log no terminal'})
     return redirect(url_for('login'))
+
+@app.route('/get_genpass_config', methods=['GET'])
+def load_genpass_config():
+    config = get_genpass_config()
+    return jsonify(config)
+
+@app.route('/change_genpass_config', methods=['POST'])
+def change_genpass_config_endpoint():
+    data = request.get_json()
+    length = data.get('length')
+    lowercase = data.get('lowercase')
+    uppercase = data.get('uppercase')
+    numbers = data.get('numbers')
+    
+    if change_genpass_config(length, lowercase, uppercase, numbers):
+        return jsonify({'success': True, 'message': 'Configuração de geração de senha alterada com sucesso'})
+    else:
+        return jsonify({'success': False, 'message': 'Erro ao alterar configuração de geração de senha'})
 
 ##########################################################################
 

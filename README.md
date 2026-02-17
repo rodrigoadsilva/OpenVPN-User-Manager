@@ -78,8 +78,7 @@ flowchart TD
 - Sistema operacional Linux
 - Privilégios de root/sudo para gerenciamento de usuários
 
-### Passos de Instalação
-## Deployer (script de instalação automatizada)
+### Deployer (script de instalação automatizada)
 
 O repositório inclui um script de deployer (`openvpnmanager_deployer.sh`) que automatiza a preparação do servidor, instalação da aplicação, criação do virtualenv, instalação das dependências, configuração do serviço systemd e regras de firewall.
 
@@ -151,3 +150,7 @@ sudo ./openvpnmanager_deployer.sh --non-interactive
 ```
 
 3. Se quiser ajustar grupos ou criar o primeiro administrador pelo menu, execute sem `--non-interactive`.
+
+## Contribuições
+
+Contribuições são bem-vindas — abra issues ou pull requests no repositório. Para suporte ou troubleshooting, verifique o arquivo de log da aplicação (`debug.log`) e o journal do systemd (`sudo journalctl -u openvpn-user-manager -f`). Este projeto está disponibilizado sob a licença MIT. Autor: Rodrigo Alves.
